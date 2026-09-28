@@ -1,10 +1,15 @@
+# Pinned, because Compose otherwise names the project — and so the volume —
+# after the directory. Renaming the checkout would then silently start a new,
+# empty database next to the old one.
+name: semi-autopilot
+
 services:
   postgres:
     image: pgvector/pgvector:pg15
-    container_name: multi-tab-postgres
+    container_name: semi-autopilot-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: multi_tab_listening
+      POSTGRES_DB: semi_autopilot
       POSTGRES_USER: app_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-defaultpassword123}  # local dev default — set DB_PASSWORD env var in production
     ports:
@@ -15,7 +20,7 @@ services:
     # `docker compose up --wait` blocks on this, so `pnpm db:up` can run
     # migrations immediately after instead of guessing with sleep.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app_user -d multi_tab_listening"]
+      test: ["CMD-SHELL", "pg_isready -U app_user -d semi_autopilot"]
       interval: 2s
       timeout: 3s
       retries: 15

@@ -30,7 +30,7 @@ export function loadDbConfig(env: NodeJS.ProcessEnv = process.env): DbConfig {
     // working out of the box.
     user: env.DB_USER ?? 'app_user',
     host: env.DB_HOST ?? 'localhost',
-    database: env.DB_NAME ?? 'multi_tab_listening',
+    database: env.DB_NAME ?? 'semi_autopilot',
     password: env.DB_PASSWORD ?? '',
     port: parsePort(env.DB_PORT),
   }

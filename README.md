@@ -1,4 +1,4 @@
-# multi-tab-listening
+# semi-autopilot
 
 A browser-automation tool that monitors multiple Discord channels simultaneously and uses AI to detect questions and generate answers — **no Bot Token required**.
 
@@ -50,8 +50,8 @@ flowchart LR
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-username/multi-tab-listening.git
-cd multi-tab-listening
+git clone https://github.com/your-username/semi-autopilot.git
+cd semi-autopilot
 
 # 2. Configure environment variables
 #    The root .env holds DB_PASSWORD alone. Docker reads it when creating the
@@ -127,7 +127,7 @@ The Discord monitor will open a Chromium window. Log in to Discord manually on t
 | `DB_PORT` | PostgreSQL port | `5432` |
 | `DB_USER` | PostgreSQL user | required |
 | `DB_PASSWORD` | PostgreSQL password | required |
-| `DB_NAME` | PostgreSQL database name | `multi_tab_listening` |
+| `DB_NAME` | PostgreSQL database name | `semi_autopilot` |
 | `STORAGE_STATE_PATH` | Path to Playwright session file | `./discord-session.json` |
 | `ENABLE_FILTERING` | Enable message noise filtering | `true` |
 | `MIN_MESSAGE_LENGTH` | Minimum character count to store a message | `30` |
@@ -180,7 +180,7 @@ VALUES ('Hello from the queue.', 'manual:2026-08-04-1', 'manual');
 ## Project Structure
 
 ```
-multi-tab-listening/
+semi-autopilot/
 ├── shared/                     # Code shared by all three services
 │   ├── src/types.ts            # Mirrors the DB schema
 │   ├── src/logger.ts           # The one winston factory

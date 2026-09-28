@@ -5,7 +5,7 @@ import { TweetQueue } from './tweet-queue.js'
 const pool = createPool({
   user: 'app_user',
   host: 'localhost',
-  database: 'multi_tab_listening',
+  database: 'semi_autopilot',
   password: 'defaultpassword123',
   port: 5432,
 })

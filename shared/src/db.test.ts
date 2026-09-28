@@ -25,7 +25,7 @@ describe('loadDbConfig', () => {
     expect(loadDbConfig({} as NodeJS.ProcessEnv)).toEqual({
       user: 'app_user',
       host: 'localhost',
-      database: 'multi_tab_listening',
+      database: 'semi_autopilot',
       password: '',
       port: 5432,
     })
@@ -69,7 +69,7 @@ describe('createPool', () => {
     const pool = createPool({
       user: 'app_user',
       host: 'localhost',
-      database: 'multi_tab_listening',
+      database: 'semi_autopilot',
       password: 'defaultpassword123',
       port: 5432,
     })
@@ -87,7 +87,7 @@ describe('createDb', () => {
     const pool = createPool({
       user: 'app_user',
       host: 'localhost',
-      database: 'multi_tab_listening',
+      database: 'semi_autopilot',
       password: 'defaultpassword123',
       port: 5432,
     })
