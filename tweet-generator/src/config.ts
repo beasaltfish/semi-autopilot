@@ -1,5 +1,6 @@
 import dotenv from 'dotenv'
 import { loadDbConfig, type DbConfig } from 'shared/db'
+import type { LlmConfig } from 'shared/llm'
 
 dotenv.config()
 
@@ -36,13 +37,6 @@ export const KINDS_OF_TIER: Record<Tier, readonly SourceKind[]> = {
 }
 
 export type Quota = Record<Tier, number>
-
-export interface LlmConfig {
-  baseUrl: string
-  apiKey: string | null
-  model: string
-  timeoutMs: number
-}
 
 export interface GeneratorConfig {
   db: DbConfig

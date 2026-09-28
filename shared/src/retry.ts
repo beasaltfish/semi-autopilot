@@ -90,7 +90,7 @@ export function parseRetryAfterMs(
 /**
  * `Retry-After` off a response that may not have a header bag at all.
  *
- * Both clients are constructed with an injected `fetch`, and the stand-ins
+ * Every client is constructed with an injected `fetch`, and the stand-ins
  * are not obliged to build a real `Response`. A missing bag has to degrade to
  * "the server said nothing" — throwing here would replace a diagnosable 429
  * with a `TypeError` raised inside the error path.

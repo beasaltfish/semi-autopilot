@@ -1,5 +1,5 @@
 import type { SourceKind } from '../config.js'
-import { policyForStatus, retryAfterMsOf, type RetryPolicy } from '../retry.js'
+import { policyForStatus, retryAfterMsOf, type RetryPolicy } from 'shared/retry'
 
 /**
  * Any failure reaching AgentLens.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LlmError, LlmUnavailableError } from './llm/client.js'
+import { LlmError, LlmUnavailableError } from 'shared/llm'
 import {
   FAST_RETRY_DELAYS_MS,
   fastRetryDelayMs,
@@ -9,7 +9,7 @@ import {
   retryAfterMsOfError,
   retryPolicyOf,
   shouldAlert,
-} from './retry.js'
+} from 'shared/retry'
 import { AgentLensError } from './sources/agentlens.js'
 
 describe('policyForStatus', () => {

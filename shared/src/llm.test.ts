@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { extractJson, LlmClient, LlmError } from './client.js'
-import type { LlmConfig } from '../config.js'
+import { extractJson, LlmClient, LlmError, type LlmConfig } from './llm.js'
 
 const config: LlmConfig = {
   baseUrl: 'http://localhost:20128/v1',

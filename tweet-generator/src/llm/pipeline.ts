@@ -6,7 +6,7 @@ import {
   LlmError,
   LlmUnavailableError,
   type ChatMessage,
-} from './client.js'
+} from 'shared/llm'
 import {
   buildCritiquePrompt,
   buildGeneratePrompt,

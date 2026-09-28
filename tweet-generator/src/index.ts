@@ -7,7 +7,7 @@ import { loadConfig } from './config.js'
 import { cleanupMedia, mediaPathFor, renderCard } from './image/render.js'
 import { pickVariant, renderTemplate } from './image/template.js'
 import { ARCHETYPES, pickArchetype } from './llm/archetypes.js'
-import { LlmClient } from './llm/client.js'
+import { LlmClient } from 'shared/llm'
 import {
   generateTweet,
   GenerationGaveUp,
@@ -22,7 +22,7 @@ import {
   retryAfterMsOfError,
   retryPolicyOf,
   shouldAlert,
-} from './retry.js'
+} from 'shared/retry'
 import { AgentLensClient, AgentLensError } from './sources/agentlens.js'
 import { GeneratorStore } from './store.js'
 

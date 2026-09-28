@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Candidate } from '../sources/candidates.js'
-import { LlmError, LlmUnavailableError } from './client.js'
+import { LlmError, LlmUnavailableError } from 'shared/llm'
 import { DEFAULT_BANNED_PHRASES } from './validate.js'
 import {
   generateTweet,

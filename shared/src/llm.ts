@@ -1,5 +1,12 @@
-import type { LlmConfig } from '../config.js'
-import { policyForStatus, retryAfterMsOf, type RetryPolicy } from '../retry.js'
+import { policyForStatus, retryAfterMsOf, type RetryPolicy } from './retry.js'
+
+/** Where the OpenAI-compatible endpoint is and which model to pin. */
+export interface LlmConfig {
+  baseUrl: string
+  apiKey: string | null
+  model: string
+  timeoutMs: number
+}
 
 /**
  * The model replied, but with something unusable — unparseable JSON, or no

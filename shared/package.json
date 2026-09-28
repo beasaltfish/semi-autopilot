@@ -11,7 +11,9 @@
     "./schema": "./src/schema.ts",
     "./notifier": "./src/notifier.ts",
     "./rng": "./src/rng.ts",
-    "./clock": "./src/clock.ts"
+    "./clock": "./src/clock.ts",
+    "./llm": "./src/llm.ts",
+    "./retry": "./src/retry.ts"
   },
   "types": "./src/types.ts",
   "scripts": {
