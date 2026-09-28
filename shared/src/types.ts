@@ -6,7 +6,7 @@
  * What is left hand-written is what no table describes: the shape of a join,
  * and the columns a given consumer actually depends on.
  */
-import type { messages, tweets } from './schema.js'
+import type { messages, replyDecisions, SOURCES, tweets } from './schema.js'
 
 /** One row of the `tweets` table. */
 export type Tweet = typeof tweets.$inferSelect
@@ -72,3 +72,20 @@ export interface DiscordMessageWithChannel extends DiscordMessage {
   channelName: string | null
   spaceName: string | null
 }
+
+/** A message source: `discord`, `wechat`. */
+export type Source = (typeof SOURCES)[number]
+
+/** One row of `reply_decisions`. */
+export type ReplyDecision = typeof replyDecisions.$inferSelect
+
+/** The furthest layer of the pipeline a message reached. */
+export type ReplyStage = ReplyDecision['stage']
+
+/** What the responder decided to do with a message. */
+export type ReplyRoute = ReplyDecision['route']
+
+/** The owner's answer on Telegram, or null while there is none. */
+export type ReplyFeedback = NonNullable<ReplyDecision['feedback']>
+
+export type { JevJudgement } from './schema.js'

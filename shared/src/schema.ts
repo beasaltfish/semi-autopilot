@@ -26,15 +26,28 @@ import {
 } from 'drizzle-orm/pg-core'
 
 /**
- * Discord's own message payload, stored whole in `messages.raw_data`.
- *
- * Only the field something actually reads is declared — the bot flag the
- * filter checks. The index signature keeps the rest addressable without
- * pretending we know its shape, which we do not: it is whatever Discord's
- * DOM handed the observer that day.
+ * Every message source the system supports. One list, because `channels`,
+ * `messages` and `threads` each carry the column and a source that exists in
+ * one table but not another is a join that silently drops rows.
  */
-export interface DiscordRawData {
+export const SOURCES = ['discord', 'wechat'] as const
+
+/**
+ * The source's own message payload, stored whole in `messages.raw_data`.
+ *
+ * Only fields something actually reads are declared, each owned by one
+ * source. The index signature keeps the rest addressable without pretending
+ * we know its shape, which we do not: it is whatever the source handed over
+ * that day.
+ */
+export interface MessageRawData {
+  /** Discord: the bot flag the filter checks. */
   author?: { bot?: boolean }
+  /**
+   * WeChat: the wxids the message @-mentions, normalised by the collector
+   * from whatever chatlog names the field, so readers never depend on it.
+   */
+  mentions?: string[]
   [key: string]: unknown
 }
 
@@ -43,11 +56,16 @@ export const channels = pgTable(
   {
     id: serial('id').primaryKey(),
     /** Which message source this row came from. See `messages.source`. */
-    source: varchar('source', { length: 20, enum: ['discord'] }).notNull(),
+    source: varchar('source', { length: 20, enum: SOURCES }).notNull(),
     channelId: varchar('channel_id', { length: 255 }).notNull(),
     channelName: varchar('channel_name', { length: 255 }),
     spaceId: varchar('space_id', { length: 255 }),
     spaceName: varchar('space_name', { length: 255 }),
+    /**
+     * Whether the services act on this channel at all. Off by default: a
+     * group the owner has not chosen is ignored, not merely deprioritised.
+     */
+    enabled: boolean('enabled').notNull().default(false),
     createdAt: timestamp('created_at').defaultNow(),
   },
   (table) => [
@@ -71,7 +89,7 @@ export const messages = pgTable(
      * No default: a default would let a writer omit the column and be quietly
      * labelled Discord. Without one, omitting it is a compile error.
      */
-    source: varchar('source', { length: 20, enum: ['discord'] }).notNull(),
+    source: varchar('source', { length: 20, enum: SOURCES }).notNull(),
     messageId: varchar('message_id', { length: 255 }).notNull(),
     channelId: varchar('channel_id', { length: 255 }).notNull(),
     /**
@@ -99,7 +117,7 @@ export const messages = pgTable(
     // `$type` is a TypeScript annotation only — the SQL type stays jsonb.
     // Without it the column infers as `unknown` and every reader needs a cast
     // to say what the monitor has always put there.
-    rawData: jsonb('raw_data').$type<DiscordRawData>(),
+    rawData: jsonb('raw_data').$type<MessageRawData>(),
     embedding: vector('embedding', { dimensions: 1536 }),
     processed: boolean('processed').default(false),
     isQuestion: boolean('is_question'),
@@ -140,7 +158,7 @@ export const threads = pgTable(
   {
     id: serial('id').primaryKey(),
     /** Which message source this row came from. See `messages.source`. */
-    source: varchar('source', { length: 20, enum: ['discord'] }).notNull(),
+    source: varchar('source', { length: 20, enum: SOURCES }).notNull(),
     threadId: varchar('thread_id', { length: 255 }).notNull(),
     originalMessageId: varchar('original_message_id', {
       length: 255,
@@ -241,3 +259,61 @@ export const generationAttempts = pgTable('generation_attempts', {
     .notNull()
     .defaultNow(),
 })
+
+/** One judgement a `jev` entry records: which label won, and how sure. */
+export interface JevJudgement {
+  label: string
+  confidence: number
+}
+
+/**
+ * One row per message the wechat-responder judged — what it decided, what it
+ * would have said, and what the owner said about that.
+ *
+ * This is the calibration dataset. Phase one sends nothing; the rows are the
+ * product. That is why a message dropped by the rules still gets a row: a
+ * wrong drop is invisible unless it was written down.
+ */
+export const replyDecisions = pgTable(
+  'reply_decisions',
+  {
+    id: serial('id').primaryKey(),
+    messageId: integer('message_id')
+      .notNull()
+      .unique()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    /** The furthest layer the message reached. */
+    stage: varchar('stage', {
+      length: 20,
+      enum: ['rule', 'jev', 'template', 'llm'],
+    }).notNull(),
+    route: varchar('route', {
+      length: 20,
+      enum: ['drop', 'alert', 'template', 'draft', 'record_only'],
+    }).notNull(),
+    /** Keyed by judgement name — `intent`, `addressed`, `needs_history`. */
+    jev: jsonb('jev').$type<Record<string, JevJudgement>>(),
+    retrievedIds: integer('retrieved_ids').array(),
+    mentionAuthorId: varchar('mention_author_id', { length: 255 }),
+    draft: text('draft'),
+    telegramMessageId: integer('telegram_message_id'),
+    feedback: varchar('feedback', {
+      length: 10,
+      enum: ['approve', 'reject', 'edit', 'ack'],
+    }),
+    editedText: text('edited_text'),
+    expiredAt: timestamp('expired_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    feedbackAt: timestamp('feedback_at', { withTimezone: true }),
+  },
+  (table) => [
+    // The expiry sweep: cards pushed, unanswered, not yet marked.
+    index('idx_reply_decisions_pending').on(
+      table.feedback,
+      table.expiredAt,
+      table.createdAt,
+    ),
+  ],
+)

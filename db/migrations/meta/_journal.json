@@ -15,6 +15,13 @@
       "when": 1786594624518,
       "tag": "0001_tired_black_tom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790594748489,
+      "tag": "0002_bored_namora",
+      "breakpoints": true
     }
   ]
 }
