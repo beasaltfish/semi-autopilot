@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { extractJson, LlmClient, LlmError, type LlmConfig } from './llm.js'
+import {
+  EMBEDDING_DIMENSIONS,
+  extractJson,
+  LlmClient,
+  LlmError,
+  LlmUnavailableError,
+  type LlmConfig,
+} from './llm.js'
 
 const config: LlmConfig = {
   baseUrl: 'http://localhost:20128/v1',
@@ -185,5 +192,85 @@ describe('extractJson', () => {
 
   it('throws LlmError on a malformed object rather than returning junk', () => {
     expect(() => extractJson('{"a": undefined}')).toThrow(LlmError)
+  })
+})
+
+describe('LlmClient.embed', () => {
+  const embedConfig: LlmConfig = { ...config, embeddingModel: 'embed-model' }
+  const vec = (fill: number) =>
+    Array.from({ length: EMBEDDING_DIMENSIONS }, () => fill)
+
+  function stubEmbed(data: unknown, status = 200) {
+    return vi.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => ({ data }),
+    })
+  }
+
+  it('posts every input to /embeddings with the embedding model', async () => {
+    const fetchImpl = stubEmbed([
+      { index: 0, embedding: vec(0.1) },
+      { index: 1, embedding: vec(0.2) },
+    ])
+    const client = new LlmClient(embedConfig, fetchImpl as never)
+
+    const vectors = await client.embed(['a', 'b'])
+
+    const [url, init] = fetchImpl.mock.calls[0]!
+    expect(url).toBe('http://localhost:20128/v1/embeddings')
+    const body = JSON.parse((init as RequestInit).body as string)
+    expect(body).toEqual({ model: 'embed-model', input: ['a', 'b'] })
+    expect(vectors).toEqual([vec(0.1), vec(0.2)])
+  })
+
+  it('returns vectors in input order when the server reorders them', async () => {
+    const fetchImpl = stubEmbed([
+      { index: 1, embedding: vec(0.2) },
+      { index: 0, embedding: vec(0.1) },
+    ])
+    const vectors = await new LlmClient(embedConfig, fetchImpl as never).embed(
+      ['a', 'b'],
+    )
+    expect(vectors).toEqual([vec(0.1), vec(0.2)])
+  })
+
+  it('rejects a vector of the wrong dimension', async () => {
+    // A model swap can change the dimension silently. Better to fail here
+    // than at an INSERT three calls away from the cause.
+    const fetchImpl = stubEmbed([{ index: 0, embedding: [0.1, 0.2] }])
+    await expect(
+      new LlmClient(embedConfig, fetchImpl as never).embed(['a']),
+    ).rejects.toThrow(LlmError)
+  })
+
+  it('rejects a reply that is missing a vector', async () => {
+    const fetchImpl = stubEmbed([{ index: 0, embedding: vec(0.1) }])
+    await expect(
+      new LlmClient(embedConfig, fetchImpl as never).embed(['a', 'b']),
+    ).rejects.toThrow(LlmError)
+  })
+
+  it('makes no request for an empty input', async () => {
+    const fetchImpl = vi.fn()
+    expect(
+      await new LlmClient(embedConfig, fetchImpl as never).embed([]),
+    ).toEqual([])
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('refuses to guess a model when none is configured', async () => {
+    const fetchImpl = vi.fn()
+    await expect(
+      new LlmClient(config, fetchImpl as never).embed(['a']),
+    ).rejects.toThrow(/embedding model/)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('classifies an outage the same way chat does', async () => {
+    const fetchImpl = stubEmbed(null, 503)
+    await expect(
+      new LlmClient(embedConfig, fetchImpl as never).embed(['a']),
+    ).rejects.toBeInstanceOf(LlmUnavailableError)
   })
 })

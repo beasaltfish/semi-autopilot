@@ -1,4 +1,10 @@
 import { policyForStatus, retryAfterMsOf, type RetryPolicy } from './retry.js'
+// Defined beside the column it sizes. Not the other way round: drizzle-kit
+// loads schema.ts on its own, and a relative import from it is one more thing
+// its loader has to resolve.
+import { EMBEDDING_DIMENSIONS } from './schema.js'
+
+export { EMBEDDING_DIMENSIONS }
 
 /** Where the OpenAI-compatible endpoint is and which model to pin. */
 export interface LlmConfig {
@@ -6,6 +12,12 @@ export interface LlmConfig {
   apiKey: string | null
   model: string
   timeoutMs: number
+  /**
+   * Optional because only some services embed. Absent means `embed()`
+   * refuses rather than guessing, since a guessed model is a guessed
+   * dimension.
+   */
+  embeddingModel?: string
 }
 
 /**
@@ -58,6 +70,10 @@ interface ChatResponse {
   choices?: Array<{ message?: { content?: string } }>
 }
 
+interface EmbeddingResponse {
+  data?: Array<{ index?: number; embedding?: number[] }>
+}
+
 export class LlmClient {
   constructor(
     private readonly config: LlmConfig,
@@ -65,6 +81,63 @@ export class LlmClient {
   ) {}
 
   async chat(messages: ChatMessage[]): Promise<string> {
+    const body = (await this.post('/chat/completions', {
+      model: this.config.model,
+      messages,
+      stream: false,
+      // Deliberately no response_format. OmniRoute's lower provider
+      // tiers ignore it, so depending on it would break on exactly the
+      // days the router falls back. extractJson plus the validator do
+      // the job instead.
+      temperature: 0.7,
+    })) as ChatResponse
+    const content = body.choices?.[0]?.message?.content
+    if (!content) {
+      // Reachable but empty-handed. That is a reply, however useless, so it
+      // costs a round rather than counting as an outage.
+      throw new LlmError('The LLM returned no content')
+    }
+    return content
+  }
+
+  /** One vector per input, in input order. */
+  async embed(input: string[]): Promise<number[][]> {
+    if (input.length === 0) return []
+    const model = this.config.embeddingModel
+    if (!model) {
+      throw new LlmError('No embedding model is configured')
+    }
+
+    const body = (await this.post('/embeddings', {
+      model,
+      input,
+    })) as EmbeddingResponse
+
+    // The API tags each vector with its input's index and does not promise
+    // to return them in order.
+    const vectors: Array<number[] | undefined> = new Array(input.length)
+    for (const item of body.data ?? []) {
+      if (typeof item.index === 'number' && Array.isArray(item.embedding)) {
+        vectors[item.index] = item.embedding
+      }
+    }
+
+    // Array.from rather than map: map skips the holes a missing vector
+    // leaves, and a hole is exactly the case that has to throw.
+    return Array.from(vectors, (vector, i) => {
+      if (!vector) {
+        throw new LlmError(`The embedding reply had no vector for input ${i}`)
+      }
+      if (vector.length !== EMBEDDING_DIMENSIONS) {
+        throw new LlmError(
+          `Expected ${EMBEDDING_DIMENSIONS} dimensions, got ${vector.length}`,
+        )
+      }
+      return vector
+    })
+  }
+
+  private async post(path: string, payload: unknown): Promise<unknown> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
@@ -75,20 +148,11 @@ export class LlmClient {
     let response: Response
     try {
       response = await this.fetchImpl(
-        `${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`,
+        `${this.config.baseUrl.replace(/\/$/, '')}${path}`,
         {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            model: this.config.model,
-            messages,
-            stream: false,
-            // Deliberately no response_format. OmniRoute's lower provider
-            // tiers ignore it, so depending on it would break on exactly the
-            // days the router falls back. extractJson plus the validator do
-            // the job instead.
-            temperature: 0.7,
-          }),
+          body: JSON.stringify(payload),
           signal: AbortSignal.timeout(this.config.timeoutMs),
         },
       )
@@ -110,14 +174,7 @@ export class LlmClient {
       })
     }
 
-    const body = (await response.json()) as ChatResponse
-    const content = body.choices?.[0]?.message?.content
-    if (!content) {
-      // Reachable but empty-handed. That is a reply, however useless, so it
-      // costs a round rather than counting as an outage.
-      throw new LlmError('The LLM returned no content')
-    }
-    return content
+    return response.json()
   }
 }
 

@@ -76,6 +76,9 @@ export const channels = pgTable(
   ],
 )
 
+/** Must match the embedding model's output; `LlmClient.embed()` checks it. */
+export const EMBEDDING_DIMENSIONS = 1536
+
 export const messages = pgTable(
   'messages',
   {
@@ -118,7 +121,7 @@ export const messages = pgTable(
     // Without it the column infers as `unknown` and every reader needs a cast
     // to say what the monitor has always put there.
     rawData: jsonb('raw_data').$type<MessageRawData>(),
-    embedding: vector('embedding', { dimensions: 1536 }),
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }),
     processed: boolean('processed').default(false),
     isQuestion: boolean('is_question'),
     questionConfidence: integer('question_confidence'),
