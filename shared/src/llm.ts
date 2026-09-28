@@ -117,9 +117,15 @@ export class LlmClient {
     // to return them in order.
     const vectors: Array<number[] | undefined> = new Array(input.length)
     for (const item of body.data ?? []) {
-      if (typeof item.index === 'number' && Array.isArray(item.embedding)) {
-        vectors[item.index] = item.embedding
+      const i = item.index
+      if (!Number.isInteger(i) || !Array.isArray(item.embedding)) continue
+      // An index outside the inputs, or seen twice, means the reply cannot be
+      // lined up with what was asked. Guessing would pair a message with
+      // another message's vector, and retrieval would go quietly wrong.
+      if (i! < 0 || i! >= input.length || vectors[i!] !== undefined) {
+        throw new LlmError(`The embedding reply had an unusable index: ${i}`)
       }
+      vectors[i!] = item.embedding
     }
 
     // Array.from rather than map: map skips the holes a missing vector

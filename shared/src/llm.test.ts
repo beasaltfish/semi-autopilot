@@ -251,6 +251,30 @@ describe('LlmClient.embed', () => {
     ).rejects.toThrow(LlmError)
   })
 
+  it('rejects a duplicate index rather than letting one vector overwrite another', async () => {
+    // A silent overwrite pairs a message with someone else's vector, and
+    // retrieval goes quietly wrong from then on.
+    const fetchImpl = stubEmbed([
+      { index: 0, embedding: vec(0.1) },
+      { index: 0, embedding: vec(0.2) },
+      { index: 1, embedding: vec(0.3) },
+    ])
+    await expect(
+      new LlmClient(embedConfig, fetchImpl as never).embed(['a', 'b']),
+    ).rejects.toThrow(LlmError)
+  })
+
+  it('rejects an index beyond the inputs rather than returning extra vectors', async () => {
+    const fetchImpl = stubEmbed([
+      { index: 0, embedding: vec(0.1) },
+      { index: 1, embedding: vec(0.2) },
+      { index: 2, embedding: vec(0.3) },
+    ])
+    await expect(
+      new LlmClient(embedConfig, fetchImpl as never).embed(['a', 'b']),
+    ).rejects.toThrow(LlmError)
+  })
+
   it('makes no request for an empty input', async () => {
     const fetchImpl = vi.fn()
     expect(
