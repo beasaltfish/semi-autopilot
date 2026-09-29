@@ -1,0 +1,8 @@
+node_modules
+dist
+*.log
+.env
+
+# If someone ever copies these here: they read every chat the owner has.
+keys.json
+decrypted/

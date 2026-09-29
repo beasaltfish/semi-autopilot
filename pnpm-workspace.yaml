@@ -4,7 +4,13 @@ packages:
   - ai-assistant
   - x-poster
   - tweet-generator
+  - wechat-collector
   - db
+
+# Native addons whose install scripts must run. pnpm 10 skips build steps by
+# default; the SQLCipher driver needs its prebuilt binary linked.
+onlyBuiltDependencies:
+  - better-sqlite3-multiple-ciphers
 
 # Shared across the packages — bump here, not in each package.json.
 catalog:
