@@ -235,6 +235,12 @@ importers:
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@types/pg@8.20.0)(bun-types@1.3.14)(pg@8.22.0)
+      pg:
+        specifier: 'catalog:'
+        version: 8.22.0
       shared:
         specifier: workspace:*
         version: link:../shared
@@ -242,6 +248,9 @@ importers:
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.20.0
       tsx:
         specifier: ^4.23.1
         version: 4.23.1
