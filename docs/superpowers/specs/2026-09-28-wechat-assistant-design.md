@@ -42,7 +42,7 @@ table with a `source` column and a 1536-dimension `embedding` column. Two new
 services join the workspace on the same terms:
 
 ```
- WeChat (Mac) ─▶ chatlog (HTTP) ─▶ wechat-collector ─┐
+ WeChat (Mac) ─▶ SQLCipher DBs ─▶ wechat-collector ─┐
                                                      ▼
                                               ┌──────────────┐
                                               │  PostgreSQL  │
@@ -65,17 +65,50 @@ WeChat client unmodified. To WeChat, the owner is simply using it. Protocol
 based approaches such as Wechaty's pad puppets, and client hooks, carry a
 materially higher risk of getting the account banned.
 
-### Why chatlog
+### Why the collector reads the databases itself
 
-[chatlog](https://github.com/sjzar/chatlog) decrypts the Mac WeChat database
-and serves it over HTTP. WeChat updates change the database format and its
-encryption, and chatlog's upstream community keeps up with those changes. The
-collector depends only on chatlog's HTTP interface, so if chatlog is ever
-abandoned, only the collector has to change. Getting the key may require
-temporarily disabling SIP on newer WeChat versions. Confirm this for the
-installed version before relying on it.
+*Revised 2026-09-29.* The original design read through
+[chatlog](https://github.com/sjzar/chatlog). Its author deleted the code in
+October 2025 after WeChat raised compliance concerns, and the forks that
+followed are being taken down one by one; at least one surviving "fork" is a
+malware lure. A running service cannot depend on any of them.
 
-chatlog is installed and run separately. It is not vendored into the repo.
+The work splits in two, along how often each part runs:
+
+- **Key extraction** runs once per account, and again only when WeChat adds a
+  database shard or the owner logs in afresh. It uses a third-party script,
+  [wechat-key-macos](https://github.com/3351666087/wechat-key-macos)'s
+  `scripts/extract_key.py`, which the owner has read, forked and runs by hand.
+  It hooks CommonCrypto with Frida, which needs WeChat ad-hoc re-signed with
+  `get-task-allow`; the owner reinstalls WeChat afterwards to restore the
+  original signature. It writes `keys.json`, one raw key per database file.
+  SIP stays enabled.
+- **Reading** runs continuously and is ours. The collector opens WeChat's
+  SQLCipher 4 databases read-only with those raw keys, through
+  `better-sqlite3-multiple-ciphers`, which also reads the uncommitted WAL —
+  where the newest messages are. If the extraction script disappears too, only
+  the manual step is affected; the collector keeps working on the keys it has.
+
+`keys.json` reads every chat the owner has. It lives outside the repository.
+
+### WeChat 4.x storage, as observed on the owner's Mac
+
+- `db_storage/message/message_N.db` holds one table per conversation, named
+  `Msg_` + md5(conversation username). Group usernames end in `@chatroom`.
+  WeChat adds `message_1.db` and onward as the history grows, each with its
+  own key.
+- `local_type` packs the type in its low 32 bits and the subtype in the high
+  32: `1` text, `3` image, `47` sticker, `43` video, `10000` system,
+  `49/57` a quoted reply, other `49/*` links, files and mini-programs.
+- `real_sender_id` is the rowid of the sender's username in `Name2Id`.
+- In a group, another member's text arrives as `"<username>:\n<text>"`; the
+  owner's own messages carry no prefix.
+- `message_content` and `source` are zstd-compressed when their
+  `WCDB_CT_*` column is `4`. `source` is an XML blob whose `<atuserlist>`
+  lists the @-mentioned usernames.
+- `server_id` is a 64-bit integer, beyond JavaScript's safe integer range.
+- `contact/contact.db` gives names: `contact` and `stranger` rows by
+  `username`, with `remark` and `nick_name`.
 
 ## Data Model
 
@@ -217,10 +250,14 @@ separate refactoring pass beforehand.
 
 ## Error Handling
 
-- **chatlog unreachable or WeChat logged out:** the collector retries with
-  backoff. After 10 minutes of continuous failure it sends a Telegram
-  attention notification. It keeps a per-group cursor so that on recovery it
-  resumes where it stopped and loses nothing.
+- **Databases unreadable** (a wrong or stale key, a missing file, no Full Disk
+  Access): the collector retries with backoff. After 10 minutes of continuous
+  failure it sends a Telegram attention notification. It resumes from the
+  newest message it has stored for each group, re-reading a short overlap, so
+  on recovery it loses nothing.
+- **A shard with no key:** WeChat has started a new `message_N.db`. The
+  collector keeps reading the shards it can and asks the owner, once, to
+  re-run key extraction.
 - **Duplicates:** the unique constraint on `(source, message_id)` makes
   inserts idempotent.
 - **Jev or LLM down:** the message stays unprocessed and is retried, and the
@@ -235,8 +272,9 @@ separate refactoring pass beforehand.
 - Each layer has vitest unit tests: the rules, the routing, template selection
   with its cooldown, the validator, and the Telegram callback handling. HTTP is
   faked through injected `fetchImpl`, the pattern the repository already uses.
-- Recorded chatlog responses serve as fixtures, so no test needs a live
-  WeChat.
+- Tests build synthetic SQLCipher databases with WeChat's schema, so no test
+  needs a live WeChat and no fixture carries a real message. The repository is
+  public.
 - **First milestone: Jev accuracy on Chinese.** Hand-label 50–100 real
   messages from the owner's groups by intent, run Jev over them and measure its
   accuracy. Any judgement that falls short is moved to the LLM. That is a
