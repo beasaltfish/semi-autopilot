@@ -6,11 +6,17 @@
  * row, and inserts are idempotent on `(source, message_id)` — re-reading an
  * overlap after a restart costs nothing.
  */
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import type { Pool } from 'pg'
 import { createDb } from 'shared/db'
 import { channels, messages } from 'shared/schema'
 import type { DecodedMessage } from './decode.js'
+
+/** A message awaiting an embedding. */
+export interface PendingEmbedding {
+  id: number
+  content: string
+}
 
 export class CollectorStore {
   private readonly db: ReturnType<typeof createDb>
@@ -87,5 +93,44 @@ export class CollectorStore {
       .onConflictDoNothing({ target: [messages.source, messages.messageId] })
       .returning({ id: messages.id })
     return inserted.length
+  }
+
+  /**
+   * WeChat messages that still need an embedding, oldest first. The length
+   * floor is applied in SQL, so a sticker or a bare "哈哈" is never a
+   * candidate and so is never re-fetched every pass — it simply stays
+   * unembedded, which for such a message is correct.
+   */
+  async pendingEmbedding(
+    minChars: number,
+    limit: number,
+  ): Promise<PendingEmbedding[]> {
+    return this.db
+      .select({ id: messages.id, content: messages.content })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.source, 'wechat'),
+          isNull(messages.embedding),
+          sql`char_length(${messages.content}) >= ${minChars}`,
+        ),
+      )
+      .orderBy(messages.id)
+      .limit(limit)
+  }
+
+  /** Write embeddings back, one transaction for the batch. */
+  async setEmbeddings(
+    entries: { id: number; vector: number[] }[],
+  ): Promise<void> {
+    if (entries.length === 0) return
+    await this.db.transaction(async (tx) => {
+      for (const { id, vector } of entries) {
+        await tx
+          .update(messages)
+          .set({ embedding: vector })
+          .where(eq(messages.id, id))
+      }
+    })
   }
 }

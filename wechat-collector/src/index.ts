@@ -9,11 +9,13 @@
  * addition, embeds them.
  */
 import { createPool } from 'shared/db'
+import { LlmClient } from 'shared/llm'
 import { createLogger } from 'shared/logger'
 import { notifyAttention } from 'shared/notifier'
 import { collectOnce } from './collect.js'
 import { loadConfig } from './config.js'
 import { loadContactNames } from './contacts.js'
+import { embedPending } from './embed.js'
 import { loadKeys } from './keys.js'
 import { openShards } from './shards.js'
 import { CollectorStore } from './store.js'
@@ -21,12 +23,18 @@ import { FailureWatch } from './watch.js'
 
 const SERVICE = 'wechat-collector'
 const FAILURE_ALERT_MS = 10 * 60_000
+const EMBED_BATCH = 64
 
 const logger = createLogger('wechat-collector.log')
 const config = loadConfig()
 const pool = createPool()
 const store = new CollectorStore(pool)
 const failures = new FailureWatch(FAILURE_ALERT_MS)
+
+// One client, only when a model is configured. Its method is bound once so the
+// embed loop passes a plain function.
+const llm = config.embedding ? new LlmClient(config.embedding) : null
+const embed = llm ? llm.embed.bind(llm) : null
 
 let stopping = false
 /** Missing-shard sets already reported, so the owner hears about each once. */
@@ -80,6 +88,28 @@ async function tick(): Promise<void> {
     failures.succeed()
   } finally {
     readers.forEach((reader) => reader.close())
+  }
+
+  // Embed after collecting, draining a backlog a batch at a time. A failure
+  // here is logged but not fatal: the messages are stored, and the next pass
+  // retries them.
+  if (embed && config.embedding) {
+    try {
+      let embedded: number
+      let total = 0
+      do {
+        embedded = await embedPending(embed, store, {
+          minChars: config.embedding.minChars,
+          batchSize: EMBED_BATCH,
+        })
+        total += embedded
+      } while (embedded === EMBED_BATCH && !stopping)
+      if (total > 0) logger.info('Embedded', { count: total })
+    } catch (error) {
+      logger.warn('Embedding pass failed; will retry', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 }
 

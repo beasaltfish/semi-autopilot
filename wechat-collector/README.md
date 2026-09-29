@@ -57,8 +57,14 @@ ten minutes, it sends one Telegram/Discord alert and keeps going on what it can.
 pnpm --filter wechat-collector probe   # counts rows it can read, no content
 ```
 
+## Embeddings
+
+Set `EMBEDDING_MODEL` (and `LLM_BASE_URL` / `LLM_API_KEY`) to embed stored
+messages for later meaning-search. Each pass embeds messages whose content is
+at least `WECHAT_EMBED_MIN_CHARS` long; shorter ones and stickers are left
+unembedded. Leave `EMBEDDING_MODEL` empty to collect without embedding.
+
 ## Scope
 
 v1 stores text messages. Images, stickers, video, system notices and quoted
-replies are recognised but skipped. Readable author names (from `contact.db`)
-and embeddings are later additions.
+replies are recognised but skipped.
