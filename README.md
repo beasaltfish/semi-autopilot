@@ -50,7 +50,7 @@ flowchart LR
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-username/semi-autopilot.git
+git clone https://github.com/beasaltfish/semi-autopilot.git
 cd semi-autopilot
 
 # 2. Configure environment variables
