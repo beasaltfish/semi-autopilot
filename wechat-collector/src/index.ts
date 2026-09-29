@@ -13,6 +13,7 @@ import { createLogger } from 'shared/logger'
 import { notifyAttention } from 'shared/notifier'
 import { collectOnce } from './collect.js'
 import { loadConfig } from './config.js'
+import { loadContactNames } from './contacts.js'
 import { loadKeys } from './keys.js'
 import { openShards } from './shards.js'
 import { CollectorStore } from './store.js'
@@ -60,11 +61,20 @@ async function tick(): Promise<void> {
   const { readers, missing } = openShards(config.dbDir, keys)
   if (missing.length) await reportMissing(missing)
 
+  // Names come from contact.db, if its key is present; otherwise messages keep
+  // the username, which the store falls back to.
+  const contactKey = keys.get('contact/contact.db')
+  const names = contactKey ? loadContactNames(config.dbDir, contactKey) : new Map()
+
   try {
-    const result = await collectOnce(readers, store, config.groups, new Date(), {
-      overlapSeconds: config.overlapSeconds,
-      backfillDays: config.backfillDays,
-    })
+    const result = await collectOnce(
+      readers,
+      store,
+      config.groups,
+      new Date(),
+      { overlapSeconds: config.overlapSeconds, backfillDays: config.backfillDays },
+      names,
+    )
     const stored = [...result.values()].reduce((sum, n) => sum + n, 0)
     if (stored > 0) logger.info('Collected', { stored, groups: result.size })
     failures.succeed()

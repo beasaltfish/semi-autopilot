@@ -30,6 +30,11 @@ export interface FixtureMessage {
   compressSource?: boolean
 }
 
+// A subset of contact/contact.db's columns, enough for name resolution.
+const CONTACT_COLUMNS =
+  'id INTEGER PRIMARY KEY, username TEXT, local_type INTEGER, remark TEXT, ' +
+  'nick_name TEXT'
+
 // Columns copied verbatim from message_0.db on the owner's Mac (WeChat 4.1.x).
 const MSG_COLUMNS =
   'local_id INTEGER PRIMARY KEY AUTOINCREMENT, server_id INTEGER, ' +
@@ -106,4 +111,31 @@ export class MessageDbWriter {
   close(): void {
     this.db.close()
   }
+}
+
+export interface FixtureContact {
+  username: string
+  remark?: string
+  nickName?: string
+  /** Written to `stranger` rather than `contact`, as group members often are. */
+  stranger?: boolean
+}
+
+/** Write a synthetic contact.db with the given rows. */
+export function writeContactDb(
+  path: string,
+  rawKey: string,
+  rows: FixtureContact[],
+): void {
+  const db = openForWriting(path, rawKey)
+  db.exec(
+    `CREATE TABLE contact(${CONTACT_COLUMNS}); CREATE TABLE stranger(${CONTACT_COLUMNS});`,
+  )
+  for (const row of rows) {
+    db.prepare(
+      `INSERT INTO ${row.stranger ? 'stranger' : 'contact'} (username, remark, nick_name)
+       VALUES (?, ?, ?)`,
+    ).run(row.username, row.remark ?? '', row.nickName ?? '')
+  }
+  db.close()
 }

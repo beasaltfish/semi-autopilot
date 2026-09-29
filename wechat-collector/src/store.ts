@@ -62,6 +62,7 @@ export class CollectorStore {
   async insertMessages(
     channelId: string,
     decoded: DecodedMessage[],
+    names: Map<string, string> = new Map(),
   ): Promise<number> {
     if (decoded.length === 0) return 0
     const inserted = await this.db
@@ -75,9 +76,9 @@ export class CollectorStore {
           // schema's other sources do.
           spaceId: '',
           authorId: message.authorId,
-          // A readable name comes from contact.db later; until then the
-          // username stands in rather than leaving the column null.
-          authorName: message.authorId,
+          // A readable name from contact.db, or the username when it names no
+          // one — never null.
+          authorName: names.get(message.authorId) ?? message.authorId,
           content: message.content,
           timestamp: message.timestamp,
           rawData: message.rawData,

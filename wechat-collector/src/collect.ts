@@ -42,6 +42,7 @@ export async function collectGroup(
   group: string,
   now: Date,
   options: CollectOptions,
+  names: Map<string, string> = new Map(),
 ): Promise<number> {
   const since = resumeSecond(await store.newestTimestamp(group), now, options)
   const decoded: DecodedMessage[] = []
@@ -51,7 +52,7 @@ export async function collectGroup(
       if (message) decoded.push(message)
     }
   }
-  return store.insertMessages(group, decoded)
+  return store.insertMessages(group, decoded, names)
 }
 
 /** Collect every enabled group once. */
@@ -61,10 +62,14 @@ export async function collectOnce(
   groups: string[],
   now: Date,
   options: CollectOptions,
+  names: Map<string, string> = new Map(),
 ): Promise<CollectResult> {
   const result: CollectResult = new Map()
   for (const group of groups) {
-    result.set(group, await collectGroup(readers, store, group, now, options))
+    result.set(
+      group,
+      await collectGroup(readers, store, group, now, options, names),
+    )
   }
   return result
 }

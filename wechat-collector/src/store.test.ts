@@ -81,6 +81,25 @@ describe('insertMessages', () => {
     })
   })
 
+  it('uses a resolved name, falling back to the username', async () => {
+    await store.insertMessages(
+      GROUP,
+      [
+        message({ messageId: '1', authorId: 'wxid_named' }),
+        message({ messageId: '2', authorId: 'wxid_unnamed' }),
+      ],
+      new Map([['wxid_named', '李老师']]),
+    )
+    const { rows } = await pool.query(
+      'SELECT author_id, author_name FROM messages WHERE channel_id = $1 ORDER BY message_id',
+      [GROUP],
+    )
+    expect(rows).toEqual([
+      { author_id: 'wxid_named', author_name: '李老师' },
+      { author_id: 'wxid_unnamed', author_name: 'wxid_unnamed' },
+    ])
+  })
+
   it('preserves a server_id past 2^53 exactly', async () => {
     await store.insertMessages(GROUP, [message()])
     const { rows } = await pool.query(
