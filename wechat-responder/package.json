@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "tsx src/index.ts",
     "eval": "tsx src/eval.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
