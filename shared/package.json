@@ -13,6 +13,7 @@
     "./rng": "./src/rng.ts",
     "./clock": "./src/clock.ts",
     "./llm": "./src/llm.ts",
+    "./jev": "./src/jev.ts",
     "./retry": "./src/retry.ts"
   },
   "types": "./src/types.ts",
