@@ -1,8 +1,8 @@
 /**
  * Resolves a WeChat username to a readable name from contact.db, so a stored
- * message carries "李老师" rather than "wxid_r00rgq011d0n11". A member the
- * owner has renamed shows that remark; otherwise their own nickname; and when
- * contact.db has neither — or no key — the caller falls back to the username.
+ * message carries "小李" rather than "wxid_r00rgq011d0n11". Prefers the
+ * member's own nickname — that is closest to what the group shows — and falls
+ * back to the owner's remark for them, then, at the call site, to the username.
  */
 import Database from 'better-sqlite3-multiple-ciphers'
 import { join } from 'node:path'
@@ -17,8 +17,8 @@ interface NameRow {
 /**
  * username → display name, for everyone contact.db names. A member is in
  * `contact` if the owner has them, in `stranger` otherwise — group members are
- * often the latter — so both are read. Empty names are dropped, leaving the
- * caller to fall back to the username.
+ * often the latter — so both are read. Names are dropped when empty, leaving
+ * the caller to fall back to the username.
  */
 export function loadContactNames(
   dbDir: string,
@@ -42,7 +42,7 @@ export function loadContactNames(
         .prepare(`SELECT username, remark, nick_name FROM ${table}`)
         .all() as NameRow[]
       for (const row of rows) {
-        const name = row.remark?.trim() || row.nick_name?.trim()
+        const name = row.nick_name?.trim() || row.remark?.trim()
         if (name) names.set(row.username, name)
       }
     }

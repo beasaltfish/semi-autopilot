@@ -20,14 +20,14 @@ function write(rows: Parameters<typeof writeContactDb>[2]): void {
 }
 
 describe('loadContactNames', () => {
-  it('prefers the remark, then the nickname', () => {
+  it('prefers the nickname, then the remark', () => {
     write([
       { username: 'wxid_a', remark: '李老师', nickName: '小李' },
-      { username: 'wxid_b', nickName: '小王' },
+      { username: 'wxid_b', remark: '老王' },
     ])
     const names = loadContactNames(dir, key)
-    expect(names.get('wxid_a')).toBe('李老师')
-    expect(names.get('wxid_b')).toBe('小王')
+    expect(names.get('wxid_a')).toBe('小李')
+    expect(names.get('wxid_b')).toBe('老王')
   })
 
   it('reads group members from the stranger table too', () => {
