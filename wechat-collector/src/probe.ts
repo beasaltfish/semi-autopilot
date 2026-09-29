@@ -9,6 +9,7 @@
  * to paste. A real driver reads the -wal alongside the .db automatically, so a
  * message just sent shows up here without WeChat checkpointing first.
  */
+import 'dotenv/config'
 import Database from 'better-sqlite3-multiple-ciphers'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
