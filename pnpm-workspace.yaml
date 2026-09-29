@@ -5,6 +5,7 @@ packages:
   - x-poster
   - tweet-generator
   - wechat-collector
+  - wechat-responder
   - db
 
 # Native addons whose install scripts must run. pnpm 10 skips build steps by

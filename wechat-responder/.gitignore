@@ -1,0 +1,8 @@
+node_modules
+dist
+*.log
+.env
+
+# Hand-labeled real messages live here, never committed (public repo).
+*.jsonl
+labeled/
