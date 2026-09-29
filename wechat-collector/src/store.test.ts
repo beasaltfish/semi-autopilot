@@ -13,7 +13,7 @@ const pool = createPool({
 const store = new CollectorStore(pool)
 
 // Test groups share this prefix so cleanup never touches real rows.
-const PREFIX = 'test-collector-'
+const PREFIX = 'test-store-'
 const GROUP = `${PREFIX}1@chatroom`
 
 async function clean(): Promise<void> {

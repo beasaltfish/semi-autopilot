@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "tsx src/index.ts",
+    "groups": "tsx src/list-groups.ts",
     "probe": "tsx src/probe.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

@@ -33,8 +33,11 @@ const pool = createPool({
   port: 5432,
 })
 const store = new CollectorStore(pool)
-const PREFIX = 'test-collector-'
+const PREFIX = 'test-collectpass-'
 const GROUP = `${PREFIX}g@chatroom`
+// A high id range disjoint from store.test's, since (source, message_id) is
+// globally unique and the two DB test files run in parallel.
+const BASE = 9_000_000_000_000_000_000n
 const ALICE = 'wxid_alice'
 
 let dir: string
@@ -65,10 +68,10 @@ describe('collectGroup', () => {
     const t = Math.floor(now.getTime() / 1000) - 100
 
     const w0 = writeShard(0, key)
-    w0.add(GROUP, { serverId: 1n, sender: ALICE, createTime: t, content: `${ALICE}:\na` })
+    w0.add(GROUP, { serverId: BASE + 1n, sender: ALICE, createTime: t, content: `${ALICE}:\na` })
     w0.close()
     const w1 = writeShard(1, key)
-    w1.add(GROUP, { serverId: 2n, sender: ALICE, createTime: t + 1, content: `${ALICE}:\nb` })
+    w1.add(GROUP, { serverId: BASE + 2n, sender: ALICE, createTime: t + 1, content: `${ALICE}:\nb` })
     w1.close()
 
     const keys = new Map([
@@ -92,7 +95,7 @@ describe('collectGroup', () => {
     const now = new Date('2026-09-30T00:00:00Z')
     const t = Math.floor(now.getTime() / 1000) - 100
     const w0 = writeShard(0, key)
-    w0.add(GROUP, { serverId: 1n, sender: ALICE, createTime: t, content: `${ALICE}:\na` })
+    w0.add(GROUP, { serverId: BASE + 1n, sender: ALICE, createTime: t, content: `${ALICE}:\na` })
     w0.close()
 
     const keys = new Map([['message/message_0.db', key]])
@@ -114,8 +117,8 @@ describe('collectOnce', () => {
     const t = Math.floor(now.getTime() / 1000) - 100
     const other = `${PREFIX}h@chatroom`
     const w0 = writeShard(0, key)
-    w0.add(GROUP, { serverId: 1n, sender: ALICE, createTime: t, content: `${ALICE}:\na` })
-    w0.add(other, { serverId: 2n, sender: ALICE, createTime: t, content: `${ALICE}:\nb` })
+    w0.add(GROUP, { serverId: BASE + 1n, sender: ALICE, createTime: t, content: `${ALICE}:\na` })
+    w0.add(other, { serverId: BASE + 2n, sender: ALICE, createTime: t, content: `${ALICE}:\nb` })
     w0.close()
 
     const { readers } = openShards(dir, new Map([['message/message_0.db', key]]))

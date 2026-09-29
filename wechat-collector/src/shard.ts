@@ -93,6 +93,24 @@ export class ShardReader {
     return this.senderNames
   }
 
+  /** Every conversation username Name2Id knows in this shard. */
+  conversations(): string[] {
+    return (
+      this.db.prepare('SELECT user_name AS name FROM Name2Id').all() as {
+        name: string
+      }[]
+    ).map((row) => row.name)
+  }
+
+  /** How many messages this shard holds for a conversation (0 if none). */
+  messageCount(username: string): number {
+    if (!this.hasConversation(username)) return 0
+    const { n } = this.db
+      .prepare(`SELECT count(*) AS n FROM "${conversationTable(username)}"`)
+      .get() as { n: number }
+    return n
+  }
+
   /** True if this shard holds the conversation's table. */
   hasConversation(username: string): boolean {
     const table = conversationTable(username)
