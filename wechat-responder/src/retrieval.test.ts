@@ -16,9 +16,9 @@ const GROUP = `${PREFIX}g@chatroom`
 const BASE = 5_500_000_000_000_000_000n
 let seq = 0
 
-/** A 1536-dim unit vector with a 1 at position `i` — orthogonal for i≠j. */
+/** A 1024-dim unit vector with a 1 at position `i` — orthogonal for i≠j. */
 function unit(i: number): number[] {
-  const v = new Array(1536).fill(0)
+  const v = new Array(1024).fill(0)
   v[i] = 1
   return v
 }

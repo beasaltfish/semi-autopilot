@@ -27,7 +27,7 @@ function candidate(overrides: Partial<Candidate> = {}): Candidate {
     authorName: '小王',
     content: '这个问题怎么弄',
     timestamp: new Date('2026-09-30T00:00:00Z'),
-    embedding: new Array(1536).fill(0),
+    embedding: new Array(1024).fill(0),
     rawData: { kind: 'text', mentions: [] },
     replyToAuthorId: null,
     ...overrides,
@@ -42,7 +42,7 @@ function deps(overrides: Partial<JudgeDeps> = {}): JudgeDeps {
       similarOwnerReplies: async () => ['重启一下', '看看日志'],
       expertFor: async () => null,
     },
-    embed: async () => new Array(1536).fill(0),
+    embed: async () => new Array(1024).fill(0),
     recentContext: async () => [],
     templatesUsedFor: async () => [],
     rng: mulberry32(1),
@@ -117,7 +117,7 @@ describe('judge', () => {
   })
 
   it('embeds on demand when the row has no embedding', async () => {
-    const embed = vi.fn(async () => new Array(1536).fill(0.1))
+    const embed = vi.fn(async () => new Array(1024).fill(0.1))
     const d = { ...deps({ embed }), jev: { decide: async () => ({ intent: { label: 'question', confidence: 0.9 } }) } }
     await judge(candidate({ embedding: null }), d, config)
     expect(embed).toHaveBeenCalledOnce()

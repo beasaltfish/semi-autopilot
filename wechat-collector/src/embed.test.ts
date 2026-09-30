@@ -5,8 +5,8 @@ import { embedPending, type EmbedStore } from './embed.js'
 import type { PendingEmbedding } from './store.js'
 import { CollectorStore } from './store.js'
 
-/** A fake embedder: one deterministic 1536-vector per input, in order. */
-function fakeEmbed(dim = 1536) {
+/** A fake embedder: one deterministic 1024-vector per input, in order. */
+function fakeEmbed(dim = 1024) {
   const calls: string[][] = []
   const embed = async (texts: string[]): Promise<number[][]> => {
     calls.push(texts)

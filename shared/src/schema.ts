@@ -76,8 +76,12 @@ export const channels = pgTable(
   ],
 )
 
-/** Must match the embedding model's output; `LlmClient.embed()` checks it. */
-export const EMBEDDING_DIMENSIONS = 1536
+/**
+ * Must match the embedding model's output; `LlmClient.embed()` checks it.
+ * 1024 is bge-m3's dimension, the local embedding model this project runs
+ * through Ollama. Change this and regenerate the migration if the model changes.
+ */
+export const EMBEDDING_DIMENSIONS = 1024
 
 export const messages = pgTable(
   'messages',
