@@ -11,7 +11,7 @@ catalog:
   pg: ^8.22.0
   winston: ^3.19.0
   '@types/pg': ^8.20.0
-  vitest: ^3.2.4
+  vitest: ^5.0.0
   playwright: ^1.62.1
   dotenv: ^17.4.2
   drizzle-orm: ^0.45.2
