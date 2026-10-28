@@ -21,7 +21,7 @@
   "devDependencies": {
     "@fontsource/inter": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.0.0",
     "@types/pg": "catalog:",
     "tsx": "^4.23.1",
     "typescript": "^6.0.0",
